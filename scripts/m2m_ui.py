@@ -224,6 +224,14 @@ def on_ui_tabs():
                                                      label='Movie Frames',
                                                      elem_id=f'{id_part}_movie_frames',
                                                      value=30)
+                            
+                            max_kvmem_size = gr.Slider(minimum=0,
+                                                     maximum=8,
+                                                     step=1,
+                                                     label='Max KVMem Size',
+                                                     elem_id=f'{id_part}_max_kvmem_size',
+                                                     value=1)
+                            
 
                     elif category == "seed":
                         max_frames = gr.Number(label='Max Frames', value=-1, elem_id=f'{id_part}_max_frames')
@@ -238,6 +246,8 @@ def on_ui_tabs():
                                                         visible=len(shared.face_restorers) > 1,
                                                         elem_id=f"{id_part}_restore_faces")
                             tiling = gr.Checkbox(label='Tiling', value=False, elem_id=f"{id_part}_tiling")
+
+                            kvmem_retain_first = gr.Checkbox(label='KVMem Retain First', value=True, elem_id=f"{id_part}_kvmem_retain_first")
 
                             extract_characters = gr.Checkbox(label='Extract characters (Need modnet models)',
                                                              value=False, elem_id=f"{id_part}_extract_characters")
@@ -288,6 +298,8 @@ def on_ui_tabs():
                            image_cfg_scale,
                            denoising_strength,
                            movie_frames,
+                           max_kvmem_size,
+                           kvmem_retain_first,
                            max_frames,
                            seed,
                            subseed, subseed_strength, seed_resize_from_h, seed_resize_from_w, seed_checkbox,

@@ -14,13 +14,22 @@ from scripts.m2m_util import get_mov_all_images, images_to_video
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
 from modules.ui import plaintext_to_html
 from scripts.m2m_modnet import get_model, infer, infer2
+from scripts.kv_mem import kv_mem, split_cross_attention_forward
+import ldm.modules.attention
 
 
 def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, generate_mov_mode, extract_characters,
                     merge_background,
                     modnet_model,
-                    args):
+                    args, max_kvmem_size, kvmem_retain_first):
     processing.fix_seed(p)
+
+    if not kv_mem.func_hacked:
+        ldm.modules.attention.CrossAttention.forward = split_cross_attention_forward
+        kv_mem.func_hacked = True
+    kv_mem.reset()
+    kv_mem.max_mem_size = max_kvmem_size
+    kv_mem.retain_first = kvmem_retain_first
 
     images = get_mov_all_images(mov_file, movie_frames)
     if not images:
@@ -39,6 +48,9 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
     for i, image in enumerate(images):
         if i >= max_frames:
             break
+
+        kv_mem.iter_reset(i)
+        kv_mem.clean_unused_mem()
 
         state.job = f"{i + 1} out of {max_frames}"
         if state.skipped:
@@ -76,6 +88,7 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
                 gen_image = Image.composite(gen_image, backup, mask)
 
             generate_images.append(gen_image)
+
 
     if not os.path.exists(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir)):
         os.makedirs(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir), exist_ok=True)
@@ -118,6 +131,7 @@ def mov2mov(id_task: str,
             image_cfg_scale,
             denoising_strength,
             movie_frames,
+            max_kvmem_size, kvmem_retain_first,
             max_frames,
             seed,
             subseed, subseed_strength, seed_resize_from_h, seed_resize_from_w, seed_enable_extras,
@@ -183,7 +197,7 @@ def mov2mov(id_task: str,
 
     generate_video = process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, width, height,
                                      generate_mov_mode,
-                                     extract_characters, merge_background, modnet_model, args)
+                                     extract_characters, merge_background, modnet_model, args, max_kvmem_size, kvmem_retain_first)
     processed = Processed(p, [], p.seed, "")
     p.close()
 
